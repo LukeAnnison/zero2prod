@@ -11,4 +11,4 @@ rustFlags = ["-C", "link-args=-fuse-ld=/usr/local/bin/zld"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
-		[dependencies]
+[dependencies]
