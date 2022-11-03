@@ -2,7 +2,6 @@ use zero2prod::startup::run;
 use std::net::TcpListener;
 use zero2prod::configuration::get_configuration;
 
-
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
     // Panic if we can't read the configuration.
