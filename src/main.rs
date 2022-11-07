@@ -1,10 +1,16 @@
 use zero2prod::startup::run;
 use std::net::TcpListener;
 use zero2prod::configuration::get_configuration;
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use sqlx::PgPool;
+
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
+
+    let subscriber = get_subscriber("zero2prod".into(), "info".into(), std::io::stdout);
+    init_subscriber(subscriber);
+
     // Panic if we can't read the configuration.
     let configuration = get_configuration().expect("Failed to read configuration.");
     let connection_pool = PgPool::connect(&configuration.database.connection_string())
