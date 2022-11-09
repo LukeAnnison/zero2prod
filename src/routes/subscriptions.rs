@@ -1,7 +1,7 @@
 use sqlx::PgPool;
 use actix_web::{HttpResponse, web};
 use chrono::Utc;
-use tracing::Instrument;
+use uuid::Uuid;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -9,6 +9,7 @@ pub struct FormData {
     name: String,
 }
 
+#[allow(clippy::async_yields_async)]
 #[tracing::instrument(
     name = "Adding a new subscription",
     skip(form, pool),
@@ -37,15 +38,17 @@ pub async fn insert_subscriber(
     form: &FormData,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        r#"INSERT INTO subscriptions (id, email, name, subscribed_at)
-            VALUES ($1, $2, $3)"#,
+        r#"
+    INSERT INTO subscriptions (id, email, name, subscribed_at)
+    VALUES ($1, $2, $3, $4)
+            "#,
         Uuid::new_v4(),
         form.email,
         form.name,
         Utc::now()
     )
     .execute(pool)
-    .await?
+    .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}", e);
         e

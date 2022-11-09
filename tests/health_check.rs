@@ -4,6 +4,7 @@ use std::net::TcpListener;
 use sqlx::{PgConnection, PgPool, Connection, Executor};
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
 
 static TRACING: Lazy<()> = Lazy::new(|| {
     let subscriber = get_subscriber("zero2prod".into(), "info".into(), std::io::stdout);
@@ -42,7 +43,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     // Create database
     
     let mut connection = PgConnection::connect(
-        &config.connection_string_without_db()
+        &config.connection_string_without_db().expose_secret()
     )
     .await
     .expect("Failed to connect to Postgres.")
@@ -51,7 +52,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
     .expect("Failed to create database.");
 
     // Migrate database
-    let connection_pool = PgPool::connect(&config.connection_string())
+    let connection_pool = PgPool::connect(&config.connection_string().expose_secret())
         .await
         .expect("Failed to connect to Postgres.");
     sqlx::migrate!("./migrations")
