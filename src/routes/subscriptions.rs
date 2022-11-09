@@ -9,53 +9,46 @@ pub struct FormData {
     name: String,
 }
 
-pub async fn subscriptions(form: web::Form<FormData>, pool: web::Data<PgPool>) -> HttpResponse {
-    let requst_id = uuid::Uuid::new_v4();
-    let request_span = tracing::info_span!(
-        "Adding a new subscriber",
-        %requst_id,
+#[tracing::instrument(
+    name = "Adding a new subscription",
+    skip(form, pool),
+    fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name,
-    );
+    )
+)]
+pub async fn subscribe(
+    form: web::Form<FormData>,
+    pool: web::Data<PgPool>,
+) -> HttpResponse {
+    match insert_subscriber(&pool, &form).await
+    {
+        Ok(_) => HttpResponse::Ok().finish(),
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
 
-    let _request_span_guard = request_span.enter();
-
-    let query_span = tracing::info_span!("Storing new subscriber in the database");
-
-    match sqlx::query!(
-        r#"
-        INSERT INTO subscriptions (id, email, name, subscribed_at)
-        VALUES ($1, $2, $3, $4)
-        "#,
-        uuid::Uuid::new_v4(),
+#[tracing::instrument(
+    name = "Saving new subscription in the database",
+    skip(form, pool)
+)]
+pub async fn insert_subscriber(
+    pool: &PgPool,
+    form: &FormData,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"INSERT INTO subscriptions (id, email, name, subscribed_at)
+            VALUES ($1, $2, $3)"#,
+        Uuid::new_v4(),
         form.email,
         form.name,
         Utc::now()
     )
-    .execute(pool.get_ref())
-    .instrument(query_span)
-    .await
-    {
-        Ok(_) => {
-            tracing::info!(
-                "Request_id {} - successfully added '{}' '{}' as a new subscriber",
-                requst_id,
-                form.email,
-                form.name,
-            );
-            HttpResponse::Ok().finish()
-        }
-        Err(e) => {
-            tracing::error!(
-                "Request_id {} - failed to add '{}' '{}' as a new subscriber: {}",
-                requst_id,
-                form.email,
-                form.name,
-                e
-            );
-            HttpResponse::InternalServerError().finish()
-        }
-    }
+    .execute(pool)
+    .await?
+    .map_err(|e| {
+        tracing::error!("Failed to execute query: {:?}", e);
+        e
+    })?;
+    Ok(())
 }
-
-
