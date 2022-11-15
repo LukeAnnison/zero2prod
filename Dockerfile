@@ -38,4 +38,3 @@ COPY configuration configuration
 ENV APP_ENVIRONMENT production
 
 ENTRYPOINT ["/zero2prod"]
-
